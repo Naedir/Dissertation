@@ -19,7 +19,7 @@ class anim_bloch():
 
         H: Hamiltonian for the system.
 
-        time: array of numbers that will be a time parameter in the time evolution of the qubit
+        time: array of numbers that will be a time parameter in the time evolution of the qubit it must be a list type
 
         name: string with a file extension (e.g. movie.mp4). 
 
@@ -48,15 +48,14 @@ class anim_bloch():
     
 
     def __animate(self, i):
+        i = self.time.index(i)
         self.sphere.clear()
         self.sphere.add_states(self.res.states[i])
         self.sphere.make_sphere()
-        self.figr.canvas.draw()
-        self.figr.canvas.flush_events()
         return self.figr
 
     def animate_bloch(self):
-        anim = ani.FuncAnimation(self.figr, self.__animate, frames=len(self.time))
+        anim = ani.FuncAnimation(self.figr, self.__animate, frames=self.time)
 
         anim.save(self.name, fps = self.fps)
         plt.ioff()
@@ -71,13 +70,15 @@ if __name__ =='__main__':
 
     # # #   The values of B and time are arbitrary, as this is just an example
 
+    import time as tm
+    t1 = tm.time()
 
     ## create an up bit:
 
     up = (q.Qobj([[1 + 1j],[-1j]])).unit()
 
     ## add a magnetic field Hamiltonian:
-    t = np.linspace(0,20,200)
+    t = list(np.linspace(0,20,30))
 
     H_constants = 1
     H = H_constants/2 * q.sigmaz()
@@ -86,3 +87,4 @@ if __name__ =='__main__':
 
     a = anim_bloch(up, H,t,'video.mp4', fps = 30)
     a.animate_bloch()
+    print(tm.time() - t1)

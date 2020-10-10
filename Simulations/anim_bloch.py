@@ -45,23 +45,25 @@ class anim_bloch():
         self.sphere=q.Bloch(axes=self.ax, fig = self.figr)
         self.sphere.render(fig=self.figr, axes=self.ax)
         self.sphere.add_states(self.state)
+        self.txt_pos = (q.sigmaz() - q.sigmay())*0.49
     
 
     def __animate(self, i):
-        i = self.time.index(i)
+        pos = self.time.index(i)
         self.sphere.clear()
-        self.sphere.add_states(self.res.states[i])
+        self.sphere.add_states(self.res.states[pos])
+        self.sphere.add_annotation(self.txt_pos, "{:.2e} s".format(i))
         self.sphere.make_sphere()
-        return self.figr
+        return self.ax
 
     def animate_bloch(self):
         anim = ani.FuncAnimation(self.figr, self.__animate, frames=self.time)
 
         anim.save(self.name, fps = self.fps)
         plt.ioff()
-        plt.close('all')
 
-if __name__ =='__main__':
+
+if 1:
 
 
     # # #   This is just an example
@@ -78,13 +80,13 @@ if __name__ =='__main__':
     up = (q.Qobj([[1 + 1j],[-1j]])).unit()
 
     ## add a magnetic field Hamiltonian:
-    t = list(np.linspace(0,20,100))
+    t = list(np.linspace(0,20,200))
 
     H_constants = 1
     H = H_constants/2 * q.sigmaz()
 
     res = q.mesolve(H, up, t)
 
-    a = anim_bloch(up, H,t,'video.mp4', fps = 30)
+    a = anim_bloch(up, H,t,'video2.mp4', fps = 30)
     a.animate_bloch()
     print(tm.time() - t1)
