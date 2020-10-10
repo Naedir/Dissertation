@@ -7,7 +7,8 @@ N_numbers = 100000
 N_bins = 20
 
 # set random seed 
-np.random.seed(0)
+np.random.seed(0)p = np.pi
+
 
 # Generate 2D normally distributed numbers.
 x, y = np.random.multivariate_normal(
