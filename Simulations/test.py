@@ -1,90 +1,55 @@
+from qutip import *
+from scipy import *
+def qubit_integrate(w, theta, gamma1, gamma2, psi0, tlist):
+    # operators and the hamiltonian
+    sx = sigmax(); sy = sigmay(); sz = sigmaz(); sm = sigmam()
+    H = w * (cos(theta) * sz + sin(theta) * sx)
+    # collapse operators
+    c_op_list = []
+    n_th = 0.5 # temperature
+    rate = gamma1 * (n_th + 1)
+    if rate > 0.0: c_op_list.append(sqrt(rate) * sm)
+    rate = gamma1 * n_th
+    if rate > 0.0: c_op_list.append(sqrt(rate) * sm.dag())
+    rate = gamma2
+    if rate > 0.0: c_op_list.append(sqrt(rate) * sz)
 
 
-import qutip as q
-from matplotlib import pyplot as plt
+    # evolve and calculate expectation values
+    output = mesolve(H, psi0, tlist, c_op_list, [sx, sy, sz])  
+    return output.expect[0], output.expect[1], output.expect[2]
+    
+## calculate the dynamics
+w     = 1.0 * 2 * pi   # qubit angular frequency
+theta = 0.2 * pi       # qubit angle from sigma_z axis (toward sigma_x axis)
+gamma1 = 0.5      # qubit relaxation rate
+gamma2 = 0.2      # qubit dephasing rate
+# initial state
+a = 1.0
+psi0 = (a* basis(2,0) + (1-a)*basis(2,1))/(sqrt(a**2 + (1-a)**2))
+tlist = linspace(0,4,100)
+#expectation values for ploting
+sx, sy, sz = qubit_integrate(w, theta, gamma1, gamma2, psi0, tlist)
+
+from pylab import *
+
+import matplotlib.animation as animation
 from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import animation as ani
-import numpy as np
-import matplotlib as mp
 
+fig = figure()
+ax = Axes3D(fig,azim=-40,elev=30)
+sphere = Bloch(axes=ax)
 
+def animate(i):
+    sphere.clear()
+    sphere.add_vectors([np.sin(theta),0,np.cos(theta)])
+    sphere.add_points([sx[:i+1],sy[:i+1],sz[:i+1]])
+    sphere.make_sphere()
+    return ax
 
-class anim_bloch():
-    """
-    This class uses qutip and matplotlib to animate a time evolution of a qubit.
+def init():
+    sphere.vector_color = ['r']
+    return ax
 
-    Parameters:
-
-        state: qubit state. has to be two dimentional so that it can be represented on a Bloch sphere. normalisation is not required, but recommended
-
-        H: Hamiltonian for the system.
-
-        time: array of numbers that will be a time parameter in the time evolution of the qubit it must be a list type
-
-        name: string with a file extension (e.g. movie.mp4). 
-
-        fps: optional parameter responsible for frames per second. if none given, default is set to 50.
-    
-    Methods:
-
-        animate_bloch(): creates the animation and saves it in a working directory.
-
-    """
-    def __init__(self, state, H, time, name, fps = 50):
-        self.state = state
-        self.H = H
-        self.time = time
-        self.name = name
-        self.fps = fps
-    
-        #resolve the time evolution in time:
-        self.res = q.mesolve(self.H, self.state, self.time)
-        
-        self.figr, self.ax = plt.subplots()
-        self.ax = Axes3D(fig = self.figr)#, animated = True)
-        self.sphere=q.Bloch(axes=self.ax, fig = self.figr)
-        self.sphere.render(fig=self.figr, axes=self.ax)
-        self.sphere.add_states(self.state)
-    
-
-    def __animate(self, i):
-        i = self.time.index(i)
-        self.sphere.clear()
-        self.sphere.add_states(self.res.states[i])
-        self.sphere.make_sphere()
-        return self.figr
-
-    def animate_bloch(self):
-        anim = ani.FuncAnimation(self.figr, self.__animate, frames=self.time)
-
-        anim.save(self.name, fps = self.fps)
-        plt.ioff()
-        plt.close('all')
-
-if __name__ =='__main__':
-
-
-    # # #   This is just an example
-
-    # # #   in this case a qubit is in a magnetic field B
-
-    # # #   The values of B and time are arbitrary, as this is just an example
-
-    import time as tm
-    t1 = tm.time()
-
-    ## create an up bit:
-
-    up = (q.Qobj([[1 + 1j],[-1j]])).unit()
-
-    ## add a magnetic field Hamiltonian:
-    t = list(np.linspace(0,20,30))
-
-    H_constants = 1
-    H = H_constants/2 * q.sigmaz()
-
-    res = q.mesolve(H, up, t)
-
-    a = anim_bloch(up, H,t,'video.mp4', fps = 30)
-    a.animate_bloch()
-    print(tm.time() - t1)
+ani = animation.FuncAnimation(fig, animate, np.arange(len(sx)))
+ani.save('bloch_sphere.mp4', fps=20)

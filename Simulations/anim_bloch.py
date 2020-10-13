@@ -8,10 +8,60 @@ import numpy as np
 import matplotlib as mp
 
 
-
-class anim_bloch():
+class anim_pars():
     """
-    This class uses qutip and matplotlib to animate a time evolution of a qubit.
+    Parent class for anim_te and anim_bloch
+
+    it has all the necessary parameters and methods for anim_bloch and ani_bloch_te subclasses.
+
+    Parameters:
+
+        state: qubit state. has to be two dimentional so that it can be represented on a Bloch sphere. normalisation is not required, but recommended
+
+        time: array of numbers that will be a time parameter in the time evolution of the qubit it must be a list type
+
+        name: string with a file extension (e.g. movie.mp4). 
+
+        fps: optional parameter responsible for frames per second. if none given, default is set to 50.
+    
+    Methods:
+
+        animate_bloch(): creates the animation and saves it in a working directory.
+
+
+    """
+    def __init__(self, state, time, name, fps = 50):
+        self.state = state
+        self.time = time
+        self.name = name
+        self.fps = fps
+
+        self.res = []        
+        self.figr, self.ax = plt.subplots()
+        self.ax = Axes3D(fig = self.figr)#, animated = True)
+        self.sphere=q.Bloch(axes=self.ax, fig = self.figr)
+        self.sphere.render(fig=self.figr, axes=self.ax)
+        self.sphere.add_states(self.state)
+        self.txt_pos = (q.sigmaz() - q.sigmay())*0.49
+    
+
+    def __animate(self, i):
+        pos = self.time.index(i)
+        self.sphere.clear()
+        self.sphere.add_states(self.res[pos])
+        self.sphere.add_annotation(self.txt_pos, "{:.2e} s".format(i))
+        self.sphere.make_sphere()
+        return self.ax
+
+    def animate_bloch(self):
+        anim = ani.FuncAnimation(self.figr, self.__animate, frames=self.time)
+
+        anim.save(self.name, fps = self.fps)
+        plt.ioff()
+
+class anim_bloch_te(anim_pars):
+    """
+    This class uses qutip and matplotlib to animate a time evolution of a qubit. a Hamiltonian must be given so that it can be solved in time using a Master Equation
 
     Parameters:
 
@@ -30,40 +80,47 @@ class anim_bloch():
         animate_bloch(): creates the animation and saves it in a working directory.
 
     """
-    def __init__(self, state, H, time, name, fps = 50):
-        self.state = state
+    def __init__(self, state, time, name, H, fps = 50):
+        super().__init__(state, time, name, fps = 50)
         self.H = H
-        self.time = time
-        self.name = name
-        self.fps = fps
     
         #resolve the time evolution in time:
         self.res = q.mesolve(self.H, self.state, self.time)
+        self.res = res.states
         
-        self.figr, self.ax = plt.subplots()
-        self.ax = Axes3D(fig = self.figr)#, animated = True)
-        self.sphere=q.Bloch(axes=self.ax, fig = self.figr)
-        self.sphere.render(fig=self.figr, axes=self.ax)
-        self.sphere.add_states(self.state)
-        self.txt_pos = (q.sigmaz() - q.sigmay())*0.49
+class anim_bloch(anim_pars):
+
+        """
+    This class uses qutip and matplotlib to animate a time evolution of a qubit.
+    This class does NOT take a Hamiltonian, instead it requires a list of states solved in time.
+
+    Parameters:
+
+        state: qubit state. has to be two dimentional so that it can be represented on a Bloch sphere. normalisation is not required, but recommended
+
+        state_list: list of qubit states solved in time
+
+        time: array of numbers that will be a time parameter in the time evolution of the qubit it must be a list type
+
+        name: string with a file extension (e.g. movie.mp4). 
+
+        fps: optional parameter responsible for frames per second. if none given, default is set to 50.
     
+    Methods:
 
-    def __animate(self, i):
-        pos = self.time.index(i)
-        self.sphere.clear()
-        self.sphere.add_states(self.res.states[pos])
-        self.sphere.add_annotation(self.txt_pos, "{:.2e} s".format(i))
-        self.sphere.make_sphere()
-        return self.ax
+        animate_bloch(): creates the animation and saves it in a working directory.
 
-    def animate_bloch(self):
-        anim = ani.FuncAnimation(self.figr, self.__animate, frames=self.time)
+    """
 
-        anim.save(self.name, fps = self.fps)
-        plt.ioff()
+    def __init__(self, state, time, name, state_list, fps = 50):
+        super().__init__(state, time, name, fps = 50)
+
+        #resolve the time evolution in time:
+        self.res = state_list
 
 
-if 1:
+
+if __name__ == '__main__':
 
 
     # # #   This is just an example
@@ -82,11 +139,18 @@ if 1:
     ## add a magnetic field Hamiltonian:
     t = list(np.linspace(0,20,200))
 
-    H_constants = 1
+    H_constants = 0.25
+    H_2 = 1 * q.sigmax()
+    w0 = 1
+    def ham(t, args):
+
+        return np.cos(w0*t)
+
     H = H_constants/2 * q.sigmaz()
+    H_fin = [H, [H_2, ham]]
+    res = q.mesolve(H_fin, up, t).states
 
-    res = q.mesolve(H, up, t)
-
-    a = anim_bloch(up, H,t,'video2.mp4', fps = 30)
+    a = anim_bloch(up, t,'video1.mp4', res, fps = 30)
+    # a = anim_bloch_te(up, t,'video2.mp4', H_fin, fps = 30)
     a.animate_bloch()
     print(tm.time() - t1)

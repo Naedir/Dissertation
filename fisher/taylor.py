@@ -33,7 +33,7 @@ def taylor(func, variable, a, order):
 if __name__ == '__main__':
     x = symbols('x')
 
-    f = x**3 + 5 + sin(x)*cos(x)
+    f = x**3
 
     nums = np.linspace(-1*np.pi,1*np.pi,50)
     lam_f = lambdify(x, f, 'numpy')
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     plt.pause(0.5)
     plt.block = True
 
-    ord = 15
+    ord = 3
     ind2 = 0
 
 
@@ -82,7 +82,7 @@ if __name__ == '__main__':
 
         else:
             leg = []
-        plt.pause(0.1)
+        plt.pause(0.5)
 
 
         
@@ -93,4 +93,5 @@ if __name__ == '__main__':
     ax.legend(leg)    
     ax.set_title("Taylor expansion of {} around {}".format(f, around))
 
+    input('')
 # fig.show()
