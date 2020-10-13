@@ -57,7 +57,6 @@ class anim_pars():
         anim = ani.FuncAnimation(self.figr, self.__animate, frames=self.time)
 
         anim.save(self.name, fps = self.fps)
-        plt.ioff()
 
 class anim_bloch_te(anim_pars):
     """
@@ -86,11 +85,11 @@ class anim_bloch_te(anim_pars):
     
         #resolve the time evolution in time:
         self.res = q.mesolve(self.H, self.state, self.time)
-        self.res = res.states
+        self.res = self.res.states
         
 class anim_bloch(anim_pars):
 
-        """
+    """
     This class uses qutip and matplotlib to animate a time evolution of a qubit.
     This class does NOT take a Hamiltonian, instead it requires a list of states solved in time.
 
@@ -117,3 +116,22 @@ class anim_bloch(anim_pars):
 
         #resolve the time evolution in time:
         self.res = state_list
+
+
+
+if __name__ == '__main__':
+        
+    up = q.basis(2,0)
+    t = list(np.linspace(0,10,50))
+    H = q.sigmax()
+
+    res = q.mesolve(H, up, t)
+
+
+    up = up*up.dag() 
+    
+    a = anim_bloch_te(up, t, "vid.mp4", H)
+
+    # a = anim_bloch(up, t, "vid.mp4", res.states)
+
+    a.animate_bloch()

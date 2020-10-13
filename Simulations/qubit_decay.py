@@ -1,4 +1,5 @@
 from anim_bloch import  *
+import sympy as sp
 
 #################################
 ## Time dependant Hamiltonian (H = H_0 + H_1), where H_1 = f(t) * H_1_const 
@@ -26,26 +27,39 @@ t1 = tm.time()
 
 ## create an up bit:
 
-qubit = (q.Qobj([[1 + 1j],[-1j]])).unit()
+qubit = q.basis(2,0)
+
+def bl(state):
+    b = q.Bloch()
+    b.add_states(state)
+    b.make_sphere()
+    b.show()
+    plt.show()
 
 
 up = q.basis(2,1)
 down = q.basis(2,0)
-# ud = q.sigmax() + q.sigmay()
-ud = q.sigmam()
-## add a magnetic field Hamiltonian:
-t = list(np.linspace(0,10,100))
-print(ud)
-B_z = 1
-H_2 = 1 * ud
-T1 = 0.1
+# qubit = (up+down).unit()
 
-def f(t, args):
-    return np.e**(t/T1)
+t = np.linspace(0.00000001,100,100)
+T1 = 10
 
-H_0 = B_z * q.sigmaz()
-H = [H_0, [H_2, f]]
+Bz = 0.1
+H = Bz * q.sigmaz()
+hbar = 1
 
-a = anim_bloch(qubit, H_0 ,t,'video1.mp4', fps = 20)
+relax = [None] * (len(t))
+relax[0] = qubit
+stat = [None] * (len(t)-1)
+ex = -1j * (H * (t[2] - t[1])/hbar)
+unitary = ex.expm()
+for i in range(len(t)):
+    if i >= 1:
+        stat[i-1] = ((((1 - float(sp.exp(-t[i]/T1)))/2))*up) + ((((1 + float(sp.exp(-t[i]/T1)))/2))*down)
+        matrix = unitary*(stat[i-1]*stat[i-1].dag())*unitary.dag()
+        relax[i] = ((unitary * (up + down)) + (matrix * relax[i-1])).unit()
+
+        # relax[i] = unitary*relax[i-1]
+
+a = anim_bloch(qubit, list(t[1::]), "relaxation.mp4", relax, fps = 30)
 a.animate_bloch()
-print(tm.time() - t1)
