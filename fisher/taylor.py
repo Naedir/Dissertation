@@ -64,6 +64,8 @@ class taylor_exp:
         result = 0
         for i in list(f_der.values()):
             result += i
+
+        self.solution = f1 + result
         return f1 + result
 
     def plot_func(self):
@@ -72,7 +74,7 @@ class taylor_exp:
         leg = [self.fun]
         fig, ax = plt.subplots(1,1)
         ax.set_title("Taylor expansion of {} around {}".format(self.fun, self.around))
-        ax.plot(self.xrange, lam_f(self.xrange),'x')#, 'x', animated = True)
+        ax.plot(self.xrange, lam_f(self.xrange),self.variable)#, 'x', animated = True)
         ind2 = 0
         for i in range(1, self.order + 1):
             self.order = i
@@ -140,3 +142,38 @@ class taylor_exp:
             ax.legend(leg)    
             ax.set_title("Taylor expansion of {} around {}".format(self.fun, self.around))                
             plt.pause(1)
+
+
+### here just the taylor expansion function:
+
+
+def factorial(n):
+    if n < 2:
+        return 1
+    else:
+        return n * factorial(n-1)
+
+def taylor(func, variable, a, order):
+    f1 = func.subs(variable, a)
+    f_der = {}
+    for i in range(1, order+1):
+        f_der[f"order{i}"] = (1/(factorial(i))) * ((diff(func, variable, i)).subs(variable, a))*((variable - a)**i)
+
+    result = 0
+    # if order > 1:
+    for i in list(f_der.values()):
+        result += i
+
+    return f1 + result
+
+import sympy as sp
+
+t, T1 = sp.symbols('t T1')
+
+f = (t**2*(1+sp.exp(-t/T1)))/(2*T1**4*(sp.exp(t/T1)+1)**2) + (t**2*(1-sp.exp(-t/T1)))/(2*T1**4*(sp.exp(t/T1)-1)**2)
+ts = np.linspace(0.1e-3, 50e-3,1000)
+a = taylor_exp(f, 2, T1, t, ts)
+# a.plot_func()
+
+
+# # taylor_exp()

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 from mpl_toolkits.mplot3d import Axes3D
+from sympy import *
 
 def fisher_inf(t, T1):
 
@@ -18,8 +19,11 @@ def fisher_inf(t, T1):
             ind += skip
         return arr
 
+    print('initialized')
 
-    I = (X**2)/((Y**4)*(np.e**(X/Y)-1))
+    I = (X**2)*(1+np.exp(-X/Y))/(2*Y**4*(np.exp(X/Y)+1)**2) + (X**2)*(1-np.exp(-X/Y))/(2*Y**4*(np.exp(X/Y)-1)**2)
+
+    print('calculated')
 
     I2 = np.log10(I)
 
@@ -28,6 +32,8 @@ def fisher_inf(t, T1):
     img = ax[0].imshow(I)
 
     img = ax[1].imshow(I2)
+
+    print('plotted')
 
     ax[0].set_xticks(list(np.linspace(0,len(t),10)))
     ax[0].set_xticklabels(np.round(ticks(t*1000, 10), 2), rotation = 45)

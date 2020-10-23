@@ -41,8 +41,8 @@ up = q.basis(2,1)
 down = q.basis(2,0)
 # qubit = (up+down).unit()
 
-t = np.linspace(0.00000001,100,100)
-T1 = 10
+t = np.linspace(0,20,1000)
+T1 = 1
 
 Bz = 0.1
 H = Bz * q.sigmaz()
@@ -51,15 +51,21 @@ hbar = 1
 relax = [None] * (len(t))
 relax[0] = qubit
 stat = [None] * (len(t)-1)
-ex = -1j * (H * (t[2] - t[1])/hbar)
-unitary = ex.expm()
+# ex = -1j * (H * (t[2] - t[1])/hbar)
+# unitary = ex.expm()
+con = 4
+con2 = 0.15
 for i in range(len(t)):
     if i >= 1:
-        stat[i-1] = ((((1 - float(sp.exp(-t[i]/T1)))/2))*up) + ((((1 + float(sp.exp(-t[i]/T1)))/2))*down)
-        matrix = unitary*(stat[i-1]*stat[i-1].dag())*unitary.dag()
-        relax[i] = ((unitary * (up + down)) + (matrix * relax[i-1])).unit()
+        stat[i-1] = q.Qobj([[1, (np.exp(1j*con*t[i]))*float(sp.exp(-con2*t[i]/T1))], [np.exp(-1j*con*t[i])*float(sp.exp(-con2*t[i]/T1)), 1]])*1/2
+
+        # matrix = unitary*(stat[i-1]*stat[i-1].dag())*unitary.dag()
+        relax[i] = stat[i-1]
 
         # relax[i] = unitary*relax[i-1]
 
-a = anim_bloch(qubit, list(t[1::]), "relaxation.mp4", relax, fps = 30)
+print(relax[2])
+print(relax[0])
+print(relax[len(relax) - 1])
+a = anim_bloch(qubit, list(t[1::]), "relaxation3.mp4", relax, fps = 60)
 a.animate_bloch()

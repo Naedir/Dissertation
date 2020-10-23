@@ -1,4 +1,5 @@
-from taylor import taylor
+import taylor
+import sympy as sp
 from sympy import *
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,7 +15,7 @@ a maximum is shown using a dashed line
 def max_fisher_info(t_nums, T1_nums):
     t, T1 = symbols('t T1')
 
-    f = t**2/(T1**4*(exp(t/T1) - 1))
+    f = (t**2*(1+sp.exp(-t/T1)))/(2*T1**4*(sp.exp(t/T1)+1)**2) + (t**2*(1-sp.exp(-t/T1)))/(2*T1**4*(sp.exp(t/T1)-1)**2)
     f_lam = lambdify([T1, t], f)
 
     f_taylor = taylor(f, t, T1, 2)
@@ -41,7 +42,7 @@ def max_fisher_info(t_nums, T1_nums):
         for k in range(len(ax[i])):
             ax[i][k].plot(t_nums, res2[ind])
             ax[i][k].plot(t_nums, res[ind])
-            ax[i][k].plot([1.462117157 * T1_nums[ind], 1.462117157 * T1_nums[ind]], [min(res[ind]), max(res[ind])], '--', color = 'green')
+            ax[i][k].plot([0.73425356207799* T1_nums[ind], 0.73425356207799 * T1_nums[ind]], [min(res[ind]), max(res[ind])], '--', color = 'green')
             ax[i][k].set_title(f"T1 = {T1_nums[ind]}")
             ax[i][k].legend(['func', 'approx. func', 'maximum'])
 
@@ -50,8 +51,27 @@ def max_fisher_info(t_nums, T1_nums):
 
     fig.tight_layout()
     plt.show()
+def factorial(n):
+    if n < 2:
+        return 1
+    else:
+        return n * factorial(n-1)
 
-if __name == '__main__':
+def taylor(func, variable, a, order):
+    f1 = func.subs(variable, a)
+    f_der = {}
+    for i in range(1, order+1):
+        f_der[f"order{i}"] = (1/(factorial(i))) * ((diff(func, variable, i)).subs(variable, a))*((variable - a)**i)
+
+    result = 0
+    # if order > 1:
+    for i in list(f_der.values()):
+        result += i
+
+    return f1 + result
+
+
+if __name__ == '__main__':
     T1_nums = [1e-3, 5e-3, 10e-3, 15e-3]
     t_nums = np.linspace(1e-6,50e-3, 50)
 
