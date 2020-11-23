@@ -57,7 +57,7 @@ def fisher_inf(t, T1):
     plt.show()
 
 if __name__ == '__main__':
-    t = np.linspace(1, 50,500)*(10**(-3))
-    T1 = np.linspace(1, 10, 500)*(10**(-3))
+    t = np.linspace(1, 20,500)*(10**(-3))
+    T1 = np.linspace(1, 5, 500)*(10**(-3))
 
     fisher_inf(t, T1)

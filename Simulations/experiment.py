@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from operator import add
-
+from subprocess import call
+import random as rd
 
 
 class experiment:
@@ -11,7 +12,8 @@ class experiment:
     Properties:
         
         T1: true value of T1
-        T1_est: current estimation of a decoherence time
+        T1_est: (optional parameter). If none given, the prior will be assumed to be uniform and estimate will be a mean of the uniform distribution. 
+                If provided, the prior will be gaussian.
         T1_span: span of T1 times for T1 estimation
         sigma: used as a standard deviation for T1_estimation
         mes_time: optimal time for taking a measurement which will (hopefully) maximise amount of information
@@ -33,29 +35,40 @@ class experiment:
         F_I: calculates Fisher infirmation given the T1 estimation and a range of times (self.time_span)
         
     '''
-    def __init__(self, T1_est, sigma, time_span, T1_span = np.linspace(0,50e-3,1000), T1 = 20e-3):
-
+    def __init__(self, sigma, time_span, T1_span = np.linspace(1e-9,250e-3,500), T1 = 20e-3, T1_est = False):
         self.T1 = T1    #true value of T1
-        self.T1_est = T1_est    #current estimation of T1
-        self.T1_estimates = []  #all estimates of T1
-        self.T1_estimates.append(T1_est)
         self.T1_span = T1_span
-        self.sigma = sigma
-        self.mes_time = 0.73425356207799 * self.T1_est  #optimal time for taking the next measurement
         self.time_span = time_span
-        self.T1_stats = self.gauss()
-        self.mes_true_time = 0  #keep a track of the actual time of the measurement
+        self.sigma = sigma
+        if T1_est != False:
+            self.T1_est = T1_est
+            self.T1_stats = self.gauss()    #prior
+        if T1_est == False:
+            self.T1_stats = self.uniform_prior()
+            self.T1_est = np.mean(self.T1_stats)    #current estimation of T1
+
+            
+        self.T1_estimates = []  #all estimates of T1
+        # self.T1_estimates.append(T1_est)
+        
+        
+        self.mes_time = 0.73425356207799 * self.T1_est  #optimal time for taking the next measurement
+        
+        
+        self.mes_true_time = 1e-9  #keep a track of the actual time of the measurement
 
     def gauss(self):
         return (1/(self.sigma * np.sqrt(2 * np.pi)) * np.exp( - (self.T1_span - self.T1_est)**2 / (2 * self.sigma**2)))
+    def uniform_prior(self):
+        pr = [1]*len(self.T1_span)
+        re_normalised = [i/sum(pr) for i in pr]
+        return re_normalised
 
     def loop_1(self): #we just sweep t non-adaptively from a min value to a max value
-        #reinitialize T1_estimation
-        self.T1_est = self.T1_estimates[0]
-        self.T1_estimates = [self.T1_est]
-        self.T1_stats = self.gauss()
         #the results of the measurement will be rither 1 or 0
         outcomes = [None]*len(self.time_span)    #store outcomes of the measurement
+
+        stats_matrix = [None]*len(self.time_span)
 
         for i in range(len(self.time_span)):
             #calculate the probability of getting a spin up (p(m=0)):
@@ -71,7 +84,9 @@ class experiment:
             self.bayesian_update(outcomes[i])
             self.T1_est = self.T1_span[np.nanargmax(self.T1_stats)]
             self.T1_estimates.append(self.T1_est)
-        return outcomes
+            stats_matrix[i] = self.T1_stats
+
+        return outcomes, stats_matrix
 
     def loop_1_stat(self, n):   #this will just use loop_1 and repeat it n times to make some statistics
         stats = self.loop_1()
@@ -81,16 +96,13 @@ class experiment:
         return [number / n for  number in stats]    #normalise the results by dividing each bin by 'n'
 
     def loop_2(self, n):    #at each point, you compute FI numerically and find its maximum
-        #reinitialize T1_estimation
-        self.T1_est = self.T1_estimates[0]
-        self.T1_estimates = [self.T1_est]
-        self.T1_stats = self.gauss()
         outcomes = [None]*n    #store outcomes of the measurement
+        stats_matrix = [None]*n
         for i in range(n):
             index = np.nanargmax(self.F_I()) #finds time at which fisher information is at maximum
             self.mes_true_time = self.time_span[index]
             #calculate the probability of getting a spin up (p(m=0)):
-            prob = self.p_0(self.time_span[index], self.T1)
+            prob = self.p_0(self.mes_true_time, self.T1)
             #get the outcome of the measurement using a random number and a p(m=0):
             if np.random.random() < prob:
                 outcomes[i] = 0
@@ -100,7 +112,8 @@ class experiment:
             self.bayesian_update(outcomes[i])
             self.T1_est = self.T1_span[np.nanargmax(self.T1_stats)]
             self.T1_estimates.append(self.T1_est)
-        return outcomes
+            stats_matrix[i] = self.T1_stats
+        return outcomes, stats_matrix
 
     def loop_2_stat(self, n, n_stat):   #this will just use loop_2 and repeat it n_stat times to make some statistics
         stats = self.loop_2(n)
@@ -109,11 +122,9 @@ class experiment:
         return [number / n for  number in stats] 
 
     def loop_3(self, n):    #use my formula for the optimal time of the measurement found using Taylor's expansion
-        #reinitialize T1_estimation
-        self.T1_est = self.T1_estimates[0]
-        self.T1_estimates = [self.T1_est]
-        self.T1_stats = self.gauss()
+
         outcomes = [None]*n    #store outcomes of the measurement
+        stats_matrix = [None]*n
         for i in range(n):
             time = 0.73425356207799 * self.T1_est
             self.mes_true_time = time
@@ -129,7 +140,8 @@ class experiment:
             self.bayesian_update(outcomes[i])
             self.T1_est = self.T1_span[np.nanargmax(self.T1_stats)]
             self.T1_estimates.append(self.T1_est)
-        return outcomes
+            stats_matrix[i] = self.T1_stats
+        return outcomes, stats_matrix
 
     def loop_3_stat(self, n, n_stat):   #this will just use loop_2 and repeat it n_stat times to make some statistics
         #reset the T1 distribution:
@@ -139,9 +151,41 @@ class experiment:
             stats = list(map(add, stats, self.loop_3(n)))
         return [number / n for  number in stats] 
 
+    def loop_4(self, n):   #Prior averaged approach
+        asd = []
+        outcomes = [None]*n    #store outcomes of the measurement
+        stats_matrix = [None]*n
+        for i in range(n):
+            f = self.num_integrate()
+            index = np.nanargmax(f) #finds time at which fisher information is at maximum
+            asd.append(f)
+            self.mes_true_time = self.time_span[index]
+            #calculate the probability of getting a spin up (p(m=0)):
+            prob = self.p_0(self.mes_true_time, self.T1)
+            #get the outcome of the measurement using a random number and a p(m=0):
+            if np.random.random() < prob:
+                outcomes[i] = 0
+            else:
+                outcomes[i] = 1
+            #update T1 using bayesian update
+            self.bayesian_update(outcomes[i])
+            self.T1_est = self.T1_span[np.nanargmax(self.T1_stats)]
+            self.T1_estimates.append(self.T1_est)
+            stats_matrix[i] = self.T1_stats
+        self.asd = asd
+        return outcomes, stats_matrix
+
     def F_I(self):  #calculate Fisher information at a given T1
         t = self.time_span
-        return (t**2)*(1+np.exp(-t/self.T1_est))/(2*self.T1_est**4*(np.exp(t/self.T1_est)+1)**2) + (t**2)*(1-np.exp(-t/self.T1_est))/(2*self.T1_est**4*(np.exp(t/self.T1_est)-1)**2)
+        # f = np.array()
+        return (t**2)/(self.T1_est**4*(np.exp(2*t/self.T1_est)-1))#(t**2)*(1+np.exp(-t/self.T1_est))/(2*self.T1_est**4*(np.exp(t/self.T1_est)+1)**2) + (t**2)*(1-np.exp(-t/self.T1_est))/(2*self.T1_est**4*(np.exp(t/self.T1_est)-1)**2)
+
+    def num_integrate(self):#, fun, span, var):
+        wFI_array = np.zeros(len(self.time_span))
+        for i,t in enumerate(self.time_span):
+            FI = t**2/((self.T1_span**4)*(np.exp(2*t/self.T1_span)-1))
+            wFI_array[i] = np.sum(FI*self.T1_stats)
+        return wFI_array
 
     def p_0(self, t, T1):
         return ((1 - np.exp(-t/T1))/2)
@@ -150,6 +194,7 @@ class experiment:
         return ((1 + np.exp(-t/T1))/2)
 
     def bayesian_update(self, m):
+
         measurement_time = self.mes_true_time
         ind = 0
         if m == 0:
@@ -164,52 +209,5 @@ class experiment:
             raise ValueError("Measurement outcome has to be 1 or 0")
 
         # #normalize data:
-        # norm = sum(self.T1_stats)
-        # self.T1_stats = [i/norm for i in self.T1_stats]
-
-if __name__ == '__main__':  #some plots, delete if necessary
-
-
-
-    plt.close("all")
-    
-    n = 100 #number of experiments
-    n_stat = 1#number of repeats of the experiment for the statistics
-
-    n_ax = [i+1 for i in range(n)]
-    times = np.linspace(1e-9,20e-3,n)
-    a = experiment(10e-3, 5e-3, times)
-
-    fig, ax = plt.subplots(3)
-
-    def plot_ax(i, data):
-
-        ax[i].plot(np.linspace(1,n+1,n), [a.T1]*n)
-        ax[i].plot(data)
-
-        ax[i].set_ylabel('T1')
-        ax[i].set_xlabel('experiment')
-    
-    a.loop_1()
-    plot_ax(0, a.T1_estimates)
-    a.loop_2(n)
-    plot_ax(1, a.T1_estimates)
-    a.loop_3(n)
-    plot_ax(2, a.T1_estimates)
-    
-    ax[0].set_title('approach A')
-    ax[0].legend(['true T1','T1 estimate'])
-        
-    ax[1].set_title('approach B')
-    
-    ax[1].legend(['true T1','T1 estimate'])
-    
-    ax[2].set_title('approach C')
-    
-    ax[2].legend(['true T1','T1 estimate'])
-    
-
-    fig.suptitle('Comparison of 3 different approaches')
-    fig.tight_layout()
-    fig.show()
-    plt.show()
+        norm = sum(self.T1_stats)
+        self.T1_stats = [i/norm for i in self.T1_stats]

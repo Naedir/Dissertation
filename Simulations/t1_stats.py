@@ -8,8 +8,8 @@ from subprocess import call
 pathname = os.path.dirname(sys.argv[0])        
 
 
-n = 1000 #number of experiments in each run
-reps = 1000   #number of times the experiments will be repeated
+n = 5000 #number of experiments in each run
+reps = 100   #number of times the experiments will be repeated
 
 
 matrix_a = [] #this will store all the results
@@ -17,12 +17,12 @@ matrix_b = []
 matrix_c = []
 
 
-times = np.linspace(1e-9,20e-3,n)
+times = np.linspace(1e-9,50e-3,n)
 
 for i in range(reps):
         
 
-    a = experiment(10e-3, 5e-3, times)
+    a = experiment(2e-3, 10e-3, times)
 
     a.loop_1()
     matrix_a.append(a.T1_estimates)
@@ -32,9 +32,10 @@ for i in range(reps):
     # a = experiment(10e-3, 5e-3, times)
     a.loop_3(n)
     matrix_c.append(a.T1_estimates)
+    pr = (i/reps)*100
     call('clear')
     print("\n\n")
-    print(f'{i/reps} %')
+    print(f'{pr} %')
     print("\n\n")
 
 matrix_a = np.mean(matrix_a, axis = 0)
@@ -75,9 +76,9 @@ plt.show()
 if input('save results? (y/n):\n')=='y':
     import os 
     import sys
-    path1 = os.getcwd() + '/data/matrix_1a.csv'
-    path2 = os.getcwd() + '/data/matrix_1b.csv'
-    path3 = os.getcwd() + '/data/matrix_1c.csv'
+    path1 = os.getcwd() + '/data/matrix_2a.csv'
+    path2 = os.getcwd() + '/data/matrix_2b.csv'
+    path3 = os.getcwd() + '/data/matrix_2c.csv'
 
     pd.DataFrame(matrix_a).to_csv(path1)
     pd.DataFrame(matrix_b).to_csv(path2)

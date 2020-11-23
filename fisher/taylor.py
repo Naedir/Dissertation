@@ -71,15 +71,15 @@ class taylor_exp:
     def plot_func(self):
         lam_f = lambdify(self.variable, self.fun, 'numpy')
 
-        leg = [self.fun]
+        leg = [f"${latex(self.fun)}$"]
         fig, ax = plt.subplots(1,1)
-        ax.set_title("Taylor expansion of {} around {}".format(self.fun, self.around))
-        ax.plot(self.xrange, lam_f(self.xrange),self.variable)#, 'x', animated = True)
+        ax.set_title("Taylor expansion of ${}$ around {}".format(latex(self.fun), self.around))
+        ax.plot(self.xrange, lam_f(self.xrange))#,self.variable)#, 'x', animated = True)
         ind2 = 0
         for i in range(1, self.order + 1):
             self.order = i
             f_taylor = self.taylor()
-            y = [None]*len(self.xrange)
+            y = [0]*len(self.xrange)
             ind = 0
             for i in self.xrange:
                 y[ind] = f_taylor.subs(self.variable, i)
@@ -97,8 +97,7 @@ class taylor_exp:
                 else:
                     pass
             
-            ax.legend(leg)    
-            ax.set_title("Taylor expansion of {} around {}".format(self.fun, self.around))                
+            ax.legend(leg)        
         fig.show()
     
     def anim_func(self):
@@ -169,11 +168,45 @@ def taylor(func, variable, a, order):
 import sympy as sp
 
 t, T1 = sp.symbols('t T1')
-
-f = (t**2*(1+sp.exp(-t/T1)))/(2*T1**4*(sp.exp(t/T1)+1)**2) + (t**2*(1-sp.exp(-t/T1)))/(2*T1**4*(sp.exp(t/T1)-1)**2)
+t_1 = 0.001
+f = t**2/(T1**4*(exp(2*t/T1) - 1))
+# g = t**3
+# f = f.subs(t,t_1)
 ts = np.linspace(0.1e-3, 50e-3,1000)
-a = taylor_exp(f, 2, T1, t, ts)
+# ts = np.linspace(-5,5,100)
+# a = taylor_exp(f, 0, t, T1, ts)
+
+def t(ord):
+    t, T1 = sp.symbols('t T1')
+    t_1 = 0.001
+    f = t**2/(T1**4*(exp(2*t/T1) - 1)) 
+
+    g = taylor(f,T1, t, ord)
+
+    f = f.subs(t,t_1)
+    g = g.subs(t,t_1)
+
+    fl = lambdify(T1, f)
+    gl = lambdify(T1, g)
+
+    return ord, fl, gl
 # a.plot_func()
+a, b, c = t(3)
+plt.plot(ts, b(ts))
+plt.plot(ts, c(ts), '--')
+plt.legend(['FI', f'approximation order 3'])
+a, b, c = t(4)
+# plt.plot(b(ts))
+plt.plot(ts, c(ts), '--')
+plt.legend(['FI', f'approximation order 4'])
+a, b, c = t(5)
+# plt.plot(b(ts))
+plt.plot(ts, c(ts), '--')
+plt.legend(['FI', f'approximation order 3', f'approximation order 4', f'approximation order 5'])
+plt.xlabel('T1')
+plt.title(f't = {t_1}')
+plt.ylim([-100, 500000])
+plt.show()
 
 
-# # taylor_exp()
+# taylor_exp()
